@@ -1,0 +1,114 @@
+@charset "utf-8";
+@import url("https://fonts.googleapis.com/css2?family=Nanum+Gothic&display=swap");
+* {
+  font-family: "Nanum Gothic", sans-serif;
+}
+.cf1 {
+  width: 100vw;
+  height: 100vh;
+}
+#display-chat {
+  background-color: red;
+}
+.chatarea {
+  background-color: rgb(205, 221, 223);
+}
+#chats {
+  height: calc(100vh - 72px - 40px);
+  overflow-y: scroll;
+}
+.ggupdegi,
+#userlist,
+#roomlist {
+  height: calc(100vh - 112px - 10vh);
+  overflow-y: scroll;
+}
+#chats {
+  display: flex;
+  flex-direction: column-reverse;
+}
+/* .roomdivs, */
+.rooms {
+  display: flex;
+  flex-direction: column;
+}
+.btn {
+  margin: 1px;
+}
+.msg {
+  padding: 6px;
+  font-size: x-large;
+}
+.msgdiv {
+  margin: 5px;
+}
+.margin10 {
+  margin: 10px;
+}
+.margin20 {
+  margin: 50px;
+}
+i {
+  cursor: pointer;
+}
+.cf2 {
+  background-color: rgb(250, 250, 250);
+  height: 10vh;
+  font-size: xx-large;
+  /* display: flex;
+  justify-content: space-around;
+  align-items: center; */
+}
+.footbox {
+  height: 10vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+.header {
+  height: 100px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: xx-large;
+}
+.peusa {
+  width: 25vw;
+  height: 25vh;
+  border: 1px solid gray;
+}
+.chat-peusa {
+  width: 6vw;
+  height: 6vh;
+  border: 1px solid gray;
+}
+.msgdiv span {
+  margin: 5px;
+}
+.li-roomname {
+  font-size: 1.5em;
+}
+.li-lastmsg {
+  font-size: 1.2em;
+}
+.li-datetime {
+  font: 1em;
+}
+.my-name {
+  font-size: 2.5em;
+}
+.my-profilemessage {
+  font-size: 1.2em;
+}
+.myprofile{
+  height: 15vh;
+}
+.my-peusa {
+  width: 25vw;
+  height: 25vh;
+  border: 1px solid gray;
+}
+.footbox i{
+  font-size: 7vw;
+}

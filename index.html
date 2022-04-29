@@ -1,0 +1,92 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Socket</title>
+    <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <link rel="stylesheet" href="./css/index.css" type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+</head>
+
+<body>
+    <div class="container-fluid cf1">
+        <div id="display-header" class="dp header">
+            <div id="headertitle">ㅎㅇ</div>
+            <div>
+                <i class="margin10 bi bi-search"></i>
+                <i class="createroom margin10 bi bi-plus-square"></i>
+                <i class="margin10 bi bi-gear"></i>
+            </div>
+        </div>
+        <div id="display-userlist" style="display: none;" class="dp">
+            <div id="userlist">
+                <ul id="usersul" class="list-group list-group">
+                    <li class="myprofile list-group-item">
+                        <div class="row">
+                            <div class="col-2 li-left">
+                                <img src="./public/img/dummy.png" class="img-fluid rounded-circle my-peusa">
+                            </div>
+                            <div class="col-8" li-mid>
+                                <div class="my-name">userName</div>
+                                <div class="my-profilemessage">profile message</div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div id="display-roomlist" style="display: none;" class="dp">
+            <div id="roomlist">
+                <ul id="roomsul" class="list-group list-group"></ul>
+                <!-- <div class="rooms" id="rooms"></div> -->
+            </div>
+        </div>
+        <div id="display-chat" style="display: none;" class="dp">
+            <div class="chatarea">
+                <div class="navbar">
+                    <i id="backarrow" class="bi bi-box-arrow-left h1 margin10"></i>
+                    <div class="h1 margin10" id="roomtitle">😐</div>
+                    <i class="bi bi-list h1 margin10"></i>
+                </div>
+                <div id="chats"></div>
+                <div class="input-group mb-3 footer">
+                    <input type="text" id="chat" class="form-control">
+                    <div class="input-group-append">
+                        <div id="send" class="btn btn-outline-secondary btn-warning" type="button" disabled="true">
+                            <i class="bi bi-arrow-up-circle h2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="display-settings" style="display: block;" class="dp">
+            <div class="ggupdegi">
+                <input id="userName" placeholder="이름">
+                <div class="confirmusername btn btn-success">제출</div>
+            </div>
+        </div>
+        <div id="display-footer" style="display: block;" class="container-fluid cf2 dp">
+            <div class="row">
+                <div class="footbox col menu-userlist">
+                    <i class="bi bi-people menu-userlist" id="i-userlist"></i>
+                </div>
+                <div class="footbox col menu-chatlist">
+                    <i class="bi bi-chat-dots menu-chatlist" id="i-chatlist"></i>
+                </div>
+                <div class="footbox col menu-settings">
+                    <i class="bi bi-three-dots menu-settings" id="i-settings"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</body>
+
+<script type="module" src="./public/js/index.js"></script>
+
+</html>
