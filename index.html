@@ -42,7 +42,6 @@
         <div id="display-roomlist" style="display: none;" class="dp">
             <div id="roomlist">
                 <ul id="roomsul" class="list-group list-group"></ul>
-                <!-- <div class="rooms" id="rooms"></div> -->
             </div>
         </div>
         <div id="display-chat" style="display: none;" class="dp">
@@ -50,7 +49,7 @@
                 <div class="navbar">
                     <i id="backarrow" class="bi bi-box-arrow-left h1 margin10"></i>
                     <div class="h1 margin10" id="roomtitle">😐</div>
-                    <i class="bi bi-list h1 margin10"></i>
+                    <i class="bi bi-list h1 margin10" id="gogo"></i>
                 </div>
                 <div id="chats"></div>
                 <div class="input-group mb-3 footer">
@@ -63,6 +62,11 @@
                 </div>
             </div>
         </div>
+        <div id="display-game" style="display: none;" class="dp">
+            <div id="gamescreen">
+                <canvas id="game-canvas"></canvas>
+            </div>
+        </div>
         <div id="display-settings" style="display: block;" class="dp">
             <div class="ggupdegi">
                 <input id="userName" placeholder="이름">
@@ -72,13 +76,16 @@
         <div id="display-footer" style="display: block;" class="container-fluid cf2 dp">
             <div class="row">
                 <div class="footbox col menu-userlist">
-                    <i class="bi bi-people menu-userlist" id="i-userlist"></i>
+                    <i class="menu-userlist bi bi-people" id="i-userlist"></i>
                 </div>
                 <div class="footbox col menu-chatlist">
-                    <i class="bi bi-chat-dots menu-chatlist" id="i-chatlist"></i>
+                    <i class="menu-chatlist bi bi-chat-dots" id="i-chatlist"></i>
+                </div>
+                <div class="footbox col menu-game">
+                    <i class="menu-game bi bi-dpad" id="i-game"></i>
                 </div>
                 <div class="footbox col menu-settings">
-                    <i class="bi bi-three-dots menu-settings" id="i-settings"></i>
+                    <i class="menu-settings bi bi-three-dots" id="i-settings"></i>
                 </div>
             </div>
         </div>
@@ -87,6 +94,636 @@
 
 </body>
 
-<script type="module" src="./public/js/index.js"></script>
+<!-- <script type="module" src="./public/js/index.js"></script> -->
+
+<script>
+    let lastSender = null;
+    class Chatter {
+        constructor() {
+            this.curRoom = null;
+            this.userName = null;
+        }
+
+        drawRooms(rooms) {
+            $("#roomsul").empty();
+            for (let room of rooms) {
+                $("#roomsul").append(
+                    `<li class="roomli list-group-item" data-num="${room.room_idx}" data-roomname="${room.room_name}">
+                        <div class="row">
+                            <div class="col-2 li-left">
+                                <img src="./public/img/dummy.png" class="img-fluid rounded-circle peusa">
+                            </div>
+                            <div class="col-8" li-mid>
+                                <div class="li-roomname">${room.room_name}</div>
+                                <div class="li-lastmsg">last_msg</div>
+                            </div>
+                            <div class="col-2 li-right">
+                                <div class="li-datetime">hh24:mi</div>
+                                <span class="li-badge badge bg-primary rounded-pill">11</span>
+                            </div>
+                        </div>
+                    </li>`
+                );
+            }
+        }
+
+        joinRoom(e) {
+            if (this.curRoom) {
+                this.leaveRoom();
+            }
+
+            let roomNum = e.target.closest(".roomli").getAttribute("data-num");
+            this.curRoom = roomNum;
+            document.getElementById("roomtitle").innerHTML = e.target
+                .closest(".roomli")
+                .getAttribute("data-roomname");
+
+            socket.emit("joinRoom", this.curRoom, userName.value);
+
+            this.getChatLog(roomNum);
+        }
+
+        getChatLog(roomNum) {
+            fetch(`/chatlist?roomNum=${roomNum}`)
+                .then((r) => r.json())
+                .then((r) => this.drawChat(r));
+        }
+
+        drawChat(r) {
+            $("#chats").empty();
+            for (let msg of r) {
+                this.drawMessage(msg.message, msg.sender, msg.sent_datetime);
+            }
+        }
+
+        drawMessage(msg, userName, dateTime) {
+            let myMsg = `
+                <div class="msgdiv" style="text-align: right;">
+                    <span>${dateTime}</span>
+                    <span class="alert-warning rounded msg">${msg}</span>
+                </div>`;
+
+            let othersInitialMsg = `
+                    <div class="msgdiv" style="text-align: left;">
+                        <div>${userName}</div>
+                        <div>
+                            <img src="./public/img/dummy.png" class="img-fluid rounded-circle chat-peusa"></div>
+                        &emsp;&emsp;&emsp;<span class="alert-light rounded msg">${msg}</span>
+                        <span>${dateTime}</span>
+                    </div>`;
+
+            let othersContinuousMsg = `
+                    <div class="msgdiv" style="text-align: left;">
+                        <div>
+                        &emsp;&emsp;&emsp;<span class="alert-light rounded msg">${msg}</span>
+                        <span>${dateTime}</span>
+                    </div>`;
+
+            if (userName === chatter.userName) {
+                $("#chats").prepend(myMsg);
+            } else {
+                if (!document.getElementById("chats").childNodes[1]) {
+                    $("#chats").prepend(othersInitialMsg);
+                } else {
+                    if (lastSender === userName) {
+                        $("#chats").prepend(othersContinuousMsg);
+                    } else {
+                        $("#chats").prepend(othersInitialMsg);
+                    }
+                }
+            }
+            lastSender = userName;
+        }
+
+        leaveRoom() {
+            socket.emit("leaveRoom", this.curRoom, this.userName);
+            this.curRoom = null;
+        }
+
+        setUserName(e) {
+            let nameInput = document.getElementById("userName");
+            if (!nameInput.value) {
+                Swal.fire({
+                    title: "알림",
+                    text: "유효하지않음!",
+                    icon: "warning",
+                    confirmButtonText: "ㅇㅋ",
+                });
+                return false;
+            }
+            e.target.disabled = true;
+            nameInput.readOnly = true;
+            this.userName = nameInput.value;
+            e.target.innerHTML = `your userName: ${this.userName}`;
+
+            socket.emit("getRoomList_solo", {
+                socketId: socket.id,
+                userName: this.userName,
+            });
+            //
+            this.toggleDisplay("display-roomlist");
+            document.getElementById("send").disabled = false;
+        }
+
+        createRoom() {
+            let roomName = null;
+            Swal.fire({
+                title: "방 제목?",
+                input: "text",
+                inputAttributes: {
+                    autocapitalize: "off",
+                },
+                showCancelButton: true,
+                confirmButtonText: "생성",
+                cancelButtonText: "취소",
+                showLoaderOnConfirm: true,
+                allowOutsideClick: () => !Swal.isLoading(),
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (!result.value) {
+                        Swal.fire({
+                            title: "Warning",
+                            text: "invalid value!",
+                            icon: "warning",
+                            confirmButtonText: "ㅇㅋ",
+                        });
+                        return false;
+                    }
+                    roomName = result.value;
+                    socket.emit("createRoom", {
+                        roomName: roomName,
+                        userName: this.userName,
+                    });
+                }
+            });
+        }
+
+        toggleDisplay(cmd) {
+            let displays = document.getElementsByClassName("dp");
+            let hdTitle = document.getElementById("headertitle");
+            for (let dp of displays) {
+                dp.style.display = "none";
+            }
+            document.getElementById(cmd).style.display = "block";
+
+            switch (cmd) {
+                case "display-userlist":
+                    hdTitle.innerHTML = "친구";
+                    break;
+                case "display-roomlist":
+                    hdTitle.innerHTML = "채팅";
+                    break;
+                case "display-game":
+                    hdTitle.innerHTML = "겜";
+                    break;
+                case "display-settings":
+                    hdTitle.innerHTML = "더보기";
+                    break;
+            }
+
+            if (cmd === "display-chat") {
+                this.toggleHeaderAndFooter(false);
+            } else {
+                this.toggleHeaderAndFooter(true);
+            }
+        }
+
+        toggleHeaderAndFooter(bool) {
+            if (bool) {
+                document.getElementById("display-header").style.display = "flex";
+                document.getElementById("display-footer").style.display = "block";
+            } else {
+                document.getElementById("display-header").style.display = "none";
+                document.getElementById("display-footer").style.display = "none";
+            }
+        }
+    }
+    const chatter = new Chatter();
+    const socket = io();
+    socket.on("msgToRoom", (d) => {
+        chatter.drawMessage(d.msg, d.userName, d.dateTime);
+    });
+
+    socket.on("roomList", (rooms) => {
+        chatter.drawRooms(rooms);
+    });
+    socket.on("msgToRoom_leaveRoom", (d) => {
+        Swal.mixin({
+            toast: true,
+            position: "center",
+            showConfirmButton: false,
+            timer: 1500,
+            didOpen: (toast) => {
+                toast.addEventListener("mouseenter", Swal.stopTimer);
+                toast.addEventListener("mouseleave", Swal.resumeTimer);
+            },
+        }).fire({
+            icon: "info",
+            title: `${d} 퇴장`,
+        });
+    });
+    socket.on("msgToRoom_joinRoom", (d) => {
+        if (d === chatter.userName) return false;
+        Swal.mixin({
+            toast: true,
+            position: "center",
+            showConfirmButton: false,
+            timer: 1500,
+            didOpen: (toast) => {
+                toast.addEventListener("mouseenter", Swal.stopTimer);
+                toast.addEventListener("mouseleave", Swal.resumeTimer);
+            },
+        }).fire({
+            icon: "info",
+            title: `${d} 입장`,
+        });
+    });
+    socket.on("roomCreated", function (obj) {
+        socket.emit("getRoomList", { socketId: socket.id, userName: this.userName });
+    });
+
+    let chat = document.getElementById("chat");
+    chat.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter") return false;
+        document.getElementById("send").click();
+    });
+
+
+
+    socket.on("msgToRoom_joinGame", (d) => {
+        if (d === chatter.userName) return false;
+        Swal.mixin({
+            toast: true,
+            position: "center",
+            showConfirmButton: false,
+            timer: 1500,
+            didOpen: (toast) => {
+                toast.addEventListener("mouseenter", Swal.stopTimer);
+                toast.addEventListener("mouseleave", Swal.resumeTimer);
+            },
+        }).fire({
+            icon: "info",
+            title: `${d} 게임 입장`,
+        });
+    });
+    socket.on("moveLeft", (playerNum) => {
+        console.log(playerNum);
+        game.bar.vx = - game.moveSpeed;
+    });
+    socket.on("moveRight", (playerNum) => {
+        console.log(playerNum);
+        game.bar.vx = game.moveSpeed;
+    });
+    socket.on("stopMoving", (playerNum) => {
+        console.log(playerNum);
+        game.bar.vx = 0;
+    });
+
+
+
+    const getDateTimeString = function () {
+        let dt = new Date();
+        function treatUnderTen(a) {
+            return a < 10 ? "0" + a : a;
+        }
+        let year = dt.getYear() + 1900;
+        let month = treatUnderTen(dt.getMonth() + 1);
+        let date = treatUnderTen(dt.getDate());
+        let hour = treatUnderTen(dt.getHours());
+        let min = treatUnderTen(dt.getMinutes());
+        let sec = treatUnderTen(dt.getSeconds());
+        return `${year}-${month}-${date} ${hour}:${min}:${sec}`;
+    };
+
+    document.addEventListener("click", (e) => {
+        // if (e.target.tagName === "DIV") {
+        if (e.target.closest(".roomli")) {
+            chatter.joinRoom(e);
+            chatter.toggleDisplay("display-chat");
+        }
+
+        if (e.target.className.includes("confirmusername")) {
+            chatter.setUserName(e);
+        }
+
+        if (e.target.id === "send") {
+            if (!chat.value) return false;
+            socket.emit(
+                "msgToServer",
+                chatter.curRoom,
+                chatter.userName,
+                chat.value,
+                getDateTimeString()
+            );
+            chat.value = "";
+        }
+        // }
+        // if (e.target.tagName === "I") {
+        if (e.target.id === "backarrow") {
+            socket.emit("leaveRoom", chatter.curRoom, chatter.userName);
+            chatter.curRoom = null;
+            chatter.toggleDisplay("display-roomlist");
+            chatter.toggleHeaderAndFooter(true);
+        }
+
+        if (e.target.className.includes("createroom")) {
+            chatter.createRoom(e);
+        }
+        // }
+
+        if (e.target.id === "gogo") {
+            socket.emit("joinGame", chatter.curRoom, chatter.userName);
+            chatter.curRoom += '_game';
+            chatter.toggleDisplay('display-game');
+        }
+
+        if (e.target.className.includes("menu-")) {
+            let user = document.getElementById("i-userlist");
+            let chat = document.getElementById("i-chatlist");
+            let sett = document.getElementById("i-settings");
+            let game = document.getElementById("i-game");
+
+            if (e.target.className.includes("menu-userlist")) {
+                chat.classList.remove("bi-chat-dots-fill");
+                chat.classList.add("bi-chat-dots");
+                sett.classList.remove("bi-three-dots-vertical");
+                sett.classList.add("bi-three-dots");
+                game.classList.remove("bi-dpad-fill");
+                game.classList.add("bi-dpad");
+
+                user.classList.remove("bi-people");
+                user.classList.add("bi-people-fill");
+
+                chatter.toggleDisplay("display-userlist");
+            }
+            if (e.target.className.includes("menu-chatlist")) {
+                user.classList.remove("bi-people-fill");
+                user.classList.add("bi-people");
+                sett.classList.remove("bi-three-dots-vertical");
+                sett.classList.add("bi-three-dots");
+                game.classList.remove("bi-dpad-fill");
+                game.classList.add("bi-dpad");
+
+                chat.classList.remove("bi-chat-dots");
+                chat.classList.add("bi-chat-dots-fill");
+
+                chatter.toggleDisplay("display-roomlist");
+            }
+            if (e.target.className.includes("menu-game")) {
+                user.classList.remove("bi-people-fill");
+                user.classList.add("bi-people");
+                chat.classList.remove("bi-chat-dots-fill");
+                chat.classList.add("bi-chat-dots");
+                sett.classList.remove("bi-three-dots-vertical");
+                sett.classList.add("bi-three-dots");
+
+                game.classList.remove("bi-dpad");
+                game.classList.add("bi-dpad-fill");
+
+                chatter.toggleDisplay("display-game");
+            }
+            if (e.target.className.includes("menu-settings")) {
+                user.classList.remove("bi-people-fill");
+                user.classList.add("bi-people");
+                chat.classList.remove("bi-chat-dots-fill");
+                chat.classList.add("bi-chat-dots");
+                game.classList.remove("bi-dpad-fill");
+                game.classList.add("bi-dpad");
+
+                sett.classList.remove("bi-three-dots");
+                sett.classList.add("bi-three-dots-vertical");
+
+                chatter.toggleDisplay("display-settings");
+            }
+        }
+    });
+
+    let game = null;
+    window.onload = () => {
+        game = new Game();
+    }
+
+    class Game {
+        constructor() {
+            this.canvas = document.getElementById("game-canvas");
+            this.ctx = this.canvas.getContext("2d");
+
+            this.playerNum = 1;
+            this.moveSpeed = 2;
+
+            this.canvas.width = 350
+            this.canvas.height = 350
+
+            const garogap = 50;
+            const serogap = 8;
+
+            this.blocks = [];
+            for (let i = 0; i <= this.canvas.width - garogap; i += garogap) {
+                for (let j = 0; j <= 40; j += serogap) {
+                    this.blocks.push(new Block(i, j));
+                }
+            }
+
+            this.bar = new Bar(100, this.canvas.width, this.canvas.height, this.playerNum);
+
+            this.ball = new Ball(5, this.canvas.width, this.canvas.height, this.bar, this.blocks);
+
+
+            window.addEventListener('keydown', (e) => {
+                if (e.key === "ArrowRight") { socket.emit('ArrowRight', chatter.curRoom, this.playerNum);/*this.bar.vx = moveSpeed;*/ }
+                if (e.key === "ArrowLeft") { socket.emit('ArrowLeft', chatter.curRoom, this.playerNum);/*this.bar.vx = -moveSpeed;*/ }
+                if (e.key == " ") { socket.emit('SpaceBar', chatter.curRoom, this.playerNum); /*this.ball.isGameStart = true;*/ }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.key === "ArrowRight" || e.key == "ArrowLeft") { socket.emit('keyUp', chatter.curRoom, this.playerNum); /*this.bar.vx = 0;*/ }
+            });
+
+            window.requestAnimationFrame(this.animate.bind(this));
+        }
+
+        draw() {
+            this.ctx.fillStyle = "#cddddf";
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.bar.draw(this.ctx);
+
+            this.ball.draw(this.ctx);
+        }
+
+        animate() {
+            this.draw();
+            window.requestAnimationFrame(this.animate.bind(this));
+            socket.emit('sendGameStatus', game);
+        }
+    }
+
+    class Block {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+
+            this.width = 47;
+            this.height = 5;
+
+            this.strokeColor = "#000000";
+            this.fillColor = "#0093E0";
+        }
+
+        draw(ctx) {
+            ctx.strokeStyle = this.strokeColor;
+            ctx.fillStyle = this.fillColor;
+            ctx.beginPath();
+            ctx.strokeRect(this.x, this.y, this.width, this.height);
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    class Bar {
+        constructor(x, canvasWidth, canvasHeight, player) {
+            this.width = 50;
+            this.height = 5;
+
+            this.x = x;
+            this.y = canvasHeight - this.height;
+
+            this.vx = 0;
+            this.canvasWidth = canvasWidth;
+
+            this.strokeColor = "#000000";
+
+            if (player == 1)
+                this.fillColor = "#ede574";
+            if (player == 2)
+                this.fillColor = "#80c971";
+            if (player == 3)
+                this.fillColor = "#ed9874";
+
+        }
+
+        draw(ctx) {
+            this.x += this.vx;
+
+            if (this.x < 0) { this.x = 0; }
+            if (this.x + this.width > this.canvasWidth) { this.x = this.canvasWidth - this.width; }
+
+            ctx.strokeColor = this.strokeColor;
+            ctx.fillStyle = this.fillColor;
+            ctx.beginPath();
+            ctx.strokeRect(this.x, this.y, this.width, this.height);
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+    }
+
+    class Ball {
+        constructor(r, canvasWidth, canvasHeight, bar, blocks) {
+            this.x = 0;
+            this.y = 0;
+            this.r = r;
+
+            this.canvasWidth = canvasWidth;
+            this.canvasHeight = canvasHeight;
+
+            this.vx = Math.random() * 5 + 3;
+            this.vy = -5;
+
+            this.bar = bar;
+            this.blocks = blocks;
+
+            this.isGameStart = false;
+
+            this.color = "#cf2f23";
+        }
+
+        // 수평 바와 충돌한 경우
+        collisionBar() {
+            const minX = this.bar.x - this.r;
+            const maxX = this.bar.x + this.bar.width + this.r;
+            const minY = this.bar.y - this.r;
+
+            if (this.x >= minX && this.x <= maxX && this.y >= minY) {
+                this.y = this.bar.y - this.r;
+                this.vy *= -1;
+            }
+        }
+
+        // canvas의 외벽과 충돌한 경우
+        collisionCanvas() {
+            if (this.x <= this.r) {
+                this.x = this.r;
+                this.vx *= -1;
+            } else if (this.x + this.r >= this.canvasWidth) {
+                this.x = this.canvasWidth - this.r;
+                this.vx *= -1;
+            }
+
+            if (this.y <= this.r) {
+                this.y = this.r;
+                this.vy *= -1;
+            }
+
+            // 바닥에 충돌한 경우는 게임을 다시 시작
+            if (this.y + this.r >= this.canvasHeight) {
+                this.y = this.bar.y - this.r;
+                this.isGameStart = false;
+            }
+        }
+
+        // 벽돌과 충돌한 경우
+        collisionBlock() {
+            this.blocks = this.blocks.reduce((prev, block) => {
+                const minX = block.x - this.r;
+                const maxX = block.x + block.width + this.r;
+                const minY = block.y - this.r;
+                const maxY = block.y + block.height + this.r;
+
+                if (this.x >= minX && this.x <= maxX && this.y >= minY && this.y <= maxY) {
+                    // 위 아래/ 양 옆 중 어디에 충돌 했는지 확인한다.
+                    const distX = Math.min(Math.abs(this.x - minX), Math.abs(this.x - maxX));
+                    const distY = Math.min(Math.abs(this.y - minY), Math.abs(this.y - maxY));
+
+                    // 위 아래 충돌
+                    if (distX >= distY) {
+                        this.vy *= -1;
+                        this.y += this.vy;
+                    } else {
+                        this.vx *= -1;
+                        this.x += this.vy;
+                    }
+
+                } else {
+                    // 충돌하지 않을 때만 다시 그려준다.
+                    prev.push(block);
+                }
+
+                return prev;
+            }, []);
+        }
+
+        draw(ctx, blocks) {
+            if (!this.isGameStart) {
+                this.x = this.bar.x + this.bar.width / 2;
+                this.y = this.bar.y - this.r;
+            } else {
+                this.x += this.vx;
+                this.y += this.vy;
+            }
+
+            this.collisionBar();
+            this.collisionCanvas();
+            this.collisionBlock();
+
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI);
+            ctx.fill();
+
+            this.blocks.forEach((block) => {
+                block.draw(ctx);
+            });
+        }
+    }
+
+</script>
 
 </html>

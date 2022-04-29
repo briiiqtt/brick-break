@@ -24,14 +24,13 @@ app.get("/", function (req, res) {
 
 app.get("/chatlist", (req, res) => {
   db.getChatLog(req.query.roomNum).then((r) => {
-    console.log(r);
     res.send(r);
   });
 });
 
 //Socket.IO
 io.on("connection", function (ioSocket) {
-  console.log("conn socketId:", ioSocket.id);
+  // console.log("conn socketId:", ioSocket.id);
 
   ioSocket.on("disconnect", function () {
     clearInterval(ioSocket.interval);
@@ -59,10 +58,9 @@ io.on("connection", function (ioSocket) {
   /*-----------------------------------*/
 
   ioSocket.on("leaveRoom", (roomNum, userName) => {
-    io.to(roomNum).emit("msgToRoom_leaveRoom", userName);
     ioSocket.leave(roomNum);
+    io.to(roomNum).emit("msgToRoom_leaveRoom", userName);
   });
-
   ioSocket.on("joinRoom", (roomNum, userName) => {
     ioSocket.join(roomNum);
     io.to(roomNum).emit("msgToRoom_joinRoom", userName);
@@ -70,12 +68,32 @@ io.on("connection", function (ioSocket) {
 
   /*-----------------------------------*/
 
+  ioSocket.on("joinGame", (roomNum, userName) => {
+    ioSocket.join(roomNum + "_game");
+    io.to(roomNum).emit("msgToRoom_joinGame", userName);
+  });
+  ioSocket.on("leaveGame", (roomNum, userName) => {
+    ioSocket.join(roomNum + "_game");
+    io.to(roomNum).emit("msgToRoom_leaveGame", userName);
+  });
+  ioSocket.on("ArrowLeft", (roomNum, playerNum) => {
+    io.to(roomNum).emit("moveLeft", playerNum);
+  });
+  ioSocket.on("ArrowRight", (roomNum, playerNum) => {
+    io.to(roomNum).emit("moveRight", playerNum);
+  });
+  ioSocket.on("SpaceBar", (roomNum, playerNum) => {
+    io.to(roomNum).emit("readyPlayer", playerNum);
+  });
+  ioSocket.on("keyUp", (roomNum, playerNum) => {
+    io.to(roomNum).emit("stopMoving", playerNum);
+  });
+
+  /*-----------------------------------*/
+
   ioSocket.on("msgToServer", (roomNum, userName, msg, dateTime) => {
     io.to(roomNum).emit("msgToRoom", { userName, msg, dateTime });
     db.recordMessage(msg, userName, roomNum, dateTime);
-  });
-  ioSocket.on("asdf", (asdf) => {
-    console.log(asdf);
   });
 
   /*-----------------------------------*/

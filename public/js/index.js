@@ -174,6 +174,9 @@ class Chatter {
       case "display-roomlist":
         hdTitle.innerHTML = "채팅";
         break;
+      case "display-game":
+        hdTitle.innerHTML = "겜";
+        break;
       case "display-settings":
         hdTitle.innerHTML = "더보기";
         break;
@@ -206,10 +209,51 @@ socket.on("roomList", (rooms) => {
   chatter.drawRooms(rooms);
 });
 socket.on("msgToRoom_leaveRoom", (d) => {
-  console.log(`${d} has left the room`);
+  Swal.mixin({
+    toast: true,
+    position: "center",
+    showConfirmButton: false,
+    timer: 1500,
+    didOpen: (toast) => {
+      toast.addEventListener("mouseenter", Swal.stopTimer);
+      toast.addEventListener("mouseleave", Swal.resumeTimer);
+    },
+  }).fire({
+    icon: "info",
+    title: `${d} 퇴장`,
+  });
 });
 socket.on("msgToRoom_joinRoom", (d) => {
-  console.log(`${d} has joined the room`);
+  if (d === chatter.userName) return false;
+  Swal.mixin({
+    toast: true,
+    position: "center",
+    showConfirmButton: false,
+    timer: 1500,
+    didOpen: (toast) => {
+      toast.addEventListener("mouseenter", Swal.stopTimer);
+      toast.addEventListener("mouseleave", Swal.resumeTimer);
+    },
+  }).fire({
+    icon: "info",
+    title: `${d} 입장`,
+  });
+});
+socket.on("msgToRoom_joinGame", (d) => {
+  if (d === chatter.userName) return false;
+  Swal.mixin({
+    toast: true,
+    position: "center",
+    showConfirmButton: false,
+    timer: 1500,
+    didOpen: (toast) => {
+      toast.addEventListener("mouseenter", Swal.stopTimer);
+      toast.addEventListener("mouseleave", Swal.resumeTimer);
+    },
+  }).fire({
+    icon: "info",
+    title: `${d} 게임 입장`,
+  });
 });
 socket.on("roomCreated", function (obj) {
   socket.emit("getRoomList", { socketId: socket.id, userName: this.userName });
@@ -219,12 +263,6 @@ let chat = document.getElementById("chat");
 chat.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return false;
   document.getElementById("send").click();
-});
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "\\") {
-    socket.emit('asdf','asdf');
-  }
 });
 
 const getDateTimeString = function () {
@@ -242,50 +280,58 @@ const getDateTimeString = function () {
 };
 
 document.addEventListener("click", (e) => {
-  if (e.target.tagName === "DIV") {
-    // if (e.target.className.includes('roomli')) {
-    if (e.target.closest(".roomli")) {
-      chatter.joinRoom(e);
-      chatter.toggleDisplay("display-chat");
-    }
-
-    if (e.target.className.includes("confirmusername")) {
-      chatter.setUserName(e);
-    }
-
-    if (e.target.id === "send") {
-      if (!chat.value) return false;
-      socket.emit(
-        "msgToServer",
-        chatter.curRoom,
-        chatter.userName,
-        chat.value,
-        getDateTimeString()
-      );
-      chat.value = "";
-    }
+  // if (e.target.tagName === "DIV") {
+  if (e.target.closest(".roomli")) {
+    chatter.joinRoom(e);
+    chatter.toggleDisplay("display-chat");
   }
-  if (e.target.tagName === "I") {
-    if (e.target.id === "backarrow") {
-      chatter.toggleDisplay("display-roomlist");
-      chatter.toggleHeaderAndFooter(true);
-    }
 
-    if (e.target.className.includes("createroom")) {
-      chatter.createRoom(e);
-    }
+  if (e.target.className.includes("confirmusername")) {
+    chatter.setUserName(e);
+  }
+
+  if (e.target.id === "send") {
+    if (!chat.value) return false;
+    socket.emit(
+      "msgToServer",
+      chatter.curRoom,
+      chatter.userName,
+      chat.value,
+      getDateTimeString()
+    );
+    chat.value = "";
+  }
+  // }
+  // if (e.target.tagName === "I") {
+  if (e.target.id === "backarrow") {
+    socket.emit("leaveRoom", chatter.curRoom, chatter.userName);
+    chatter.curRoom = null;
+    chatter.toggleDisplay("display-roomlist");
+    chatter.toggleHeaderAndFooter(true);
+  }
+
+  if (e.target.className.includes("createroom")) {
+    chatter.createRoom(e);
+  }
+  // }
+
+  if (e.target.id === "gogo") {
+    socket.emit("joinGame", chatter.curRoom, chatter.userName);
   }
 
   if (e.target.className.includes("menu-")) {
     let user = document.getElementById("i-userlist");
     let chat = document.getElementById("i-chatlist");
     let sett = document.getElementById("i-settings");
+    let game = document.getElementById("i-game");
 
     if (e.target.className.includes("menu-userlist")) {
       chat.classList.remove("bi-chat-dots-fill");
       chat.classList.add("bi-chat-dots");
       sett.classList.remove("bi-three-dots-vertical");
       sett.classList.add("bi-three-dots");
+      game.classList.remove("bi-dpad-fill");
+      game.classList.add("bi-dpad");
 
       user.classList.remove("bi-people");
       user.classList.add("bi-people-fill");
@@ -297,17 +343,34 @@ document.addEventListener("click", (e) => {
       user.classList.add("bi-people");
       sett.classList.remove("bi-three-dots-vertical");
       sett.classList.add("bi-three-dots");
+      game.classList.remove("bi-dpad-fill");
+      game.classList.add("bi-dpad");
 
       chat.classList.remove("bi-chat-dots");
       chat.classList.add("bi-chat-dots-fill");
 
       chatter.toggleDisplay("display-roomlist");
     }
+    if (e.target.className.includes("menu-game")) {
+      user.classList.remove("bi-people-fill");
+      user.classList.add("bi-people");
+      chat.classList.remove("bi-chat-dots-fill");
+      chat.classList.add("bi-chat-dots");
+      sett.classList.remove("bi-three-dots-vertical");
+      sett.classList.add("bi-three-dots");
+
+      game.classList.remove("bi-dpad");
+      game.classList.add("bi-dpad-fill");
+
+      chatter.toggleDisplay("display-game");
+    }
     if (e.target.className.includes("menu-settings")) {
       user.classList.remove("bi-people-fill");
       user.classList.add("bi-people");
       chat.classList.remove("bi-chat-dots-fill");
       chat.classList.add("bi-chat-dots");
+      game.classList.remove("bi-dpad-fill");
+      game.classList.add("bi-dpad");
 
       sett.classList.remove("bi-three-dots");
       sett.classList.add("bi-three-dots-vertical");
@@ -316,3 +379,51 @@ document.addEventListener("click", (e) => {
     }
   }
 });
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "\\") {
+    socket.emit("asdf", "asdf");
+  }
+});
+
+class Game {
+  constructor() {
+    this.canvas = document.getElementById("game-canvas");
+    this.ctx = this.canvas.getContext("2d");
+    const blockWidth = 50;
+    const blockHeight = 20;
+    this.blocks = [];
+    for (let i = 0; i <= this.canvas.width - blockWidth; i += blockWidth) {
+      for (let j = 50; j <= 200; j += blockHeight) {
+        this.blocks.push(new Block(i, j));
+      }
+    }
+    window.requestAnimationFrame(this.animate.bind(this));
+  }
+  animate() {
+    window.requestAnimationFrame(this.animate.bind(this));
+  }
+}
+
+function newGame(){
+  new Game();
+}
+
+class Block {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = 50;
+    this.height = 20;
+    this.strokeColor = "#fff";
+    this.fillColor = "#07baa0";
+  }
+
+  draw(ctx) {
+    ctx.strokeStyle = this.strokeColor;
+    ctx.fillStyle = this.fillColor;
+    ctx.beginPath();
+    ctx.strokeRect(this.x, this.y, this.width, this.height);
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+  }
+}
