@@ -28,6 +28,8 @@ app.get("/chatlist", (req, res) => {
   });
 });
 
+let games = [];
+
 //Socket.IO
 io.on("connection", function (ioSocket) {
   // console.log("conn socketId:", ioSocket.id);
@@ -69,24 +71,88 @@ io.on("connection", function (ioSocket) {
   /*-----------------------------------*/
 
   ioSocket.on("joinGame", (roomNum, userName) => {
-    ioSocket.join(roomNum + "_game");
-    io.to(roomNum).emit("msgToRoom_joinGame", userName);
+    let gameNum = roomNum + "_game";
+
+    let gameObj = games.find((game) => game.gameNum === gameNum);
+    if (gameObj !== undefined) {
+      gameObj.playerCnt++;
+      if (gameObj.playerCnt > 2) return false;
+      ioSocket.join(gameNum);
+      io.to(ioSocket.id).emit("msgToRoom_joinGame", userName, "right");
+    } else {
+      games.push({
+        gameNum: gameNum,
+        playerCnt: 1,
+      });
+      ioSocket.join(gameNum);
+      io.to(ioSocket.id).emit("msgToRoom_joinGame", userName, "left");
+    }
+
+    console.log(games);
   });
+
   ioSocket.on("leaveGame", (roomNum, userName) => {
     ioSocket.join(roomNum + "_game");
     io.to(roomNum).emit("msgToRoom_leaveGame", userName);
   });
+
   ioSocket.on("ArrowLeft", (roomNum, playerNum) => {
     io.to(roomNum).emit("moveLeft", playerNum);
   });
+
   ioSocket.on("ArrowRight", (roomNum, playerNum) => {
     io.to(roomNum).emit("moveRight", playerNum);
   });
-  ioSocket.on("SpaceBar", (roomNum, playerNum) => {
-    io.to(roomNum).emit("readyPlayer", playerNum);
+
+  ioSocket.on("SpaceBar", (roomNum) => {
+    io.to(roomNum).emit("startGame", Math.random() * 5 + 3);
   });
+
   ioSocket.on("keyUp", (roomNum, playerNum) => {
     io.to(roomNum).emit("stopMoving", playerNum);
+  });
+
+  ioSocket.on("die", (gameNum) => {
+    // io.to(roomNum).emit("stopMoving", playerNum);
+    /*
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    * splice 왜안되냐 이거 고치기
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+    *
+     */
+    games.splice(
+      games.findIndex((game) => game.gameNum === gameNum),
+      games.findIndex((game) => game.gameNum === gameNum)-1
+    );
+
+    console.log(games);
+    
+    io.to(gameNum).emit("gameOver");
   });
 
   /*-----------------------------------*/
@@ -102,4 +168,42 @@ io.on("connection", function (ioSocket) {
     db.createRoom(obj.roomName, obj.userName);
     io.emit("roomCreated", obj);
   });
+
+
+    ioSocket.on("quit", function (obj) {
+      /*
+
+      (비정상종료 등 경우)
+      모든 소켓 연결 해제시키기
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      *
+      */
+      
+    });
+
+
 });

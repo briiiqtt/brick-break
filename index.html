@@ -350,8 +350,9 @@
 
 
 
-    socket.on("msgToRoom_joinGame", (d) => {
-        if (d === chatter.userName) return false;
+    socket.on("msgToRoom_joinGame", (userName, lr) => {
+        game.lr = lr;
+        if (userName === chatter.userName) return false;
         Swal.mixin({
             toast: true,
             position: "center",
@@ -363,20 +364,59 @@
             },
         }).fire({
             icon: "info",
-            title: `${d} 게임 입장`,
+            title: `${userName} 게임 입장`,
         });
     });
     socket.on("moveLeft", (playerNum) => {
-        console.log(playerNum);
+        Swal.mixin({
+            toast: true,
+            position: "center-start",
+            showConfirmButton: false,
+            timer: 100,
+            width: '10rem',
+            padding: '0.5rem',
+            didOpen: (toast) => {
+                toast.addEventListener("mouseenter", Swal.stopTimer);
+                toast.addEventListener("mouseleave", Swal.resumeTimer);
+            },
+        }).fire({
+            title: 'left',
+        });
         game.bar.vx = - game.moveSpeed;
     });
     socket.on("moveRight", (playerNum) => {
-        console.log(playerNum);
+        Swal.mixin({
+            toast: true,
+            position: "center-end",
+            showConfirmButton: false,
+            timer: 100,
+            width: '5rem',
+            padding: '0.5rem',
+            didOpen: (toast) => {
+                toast.addEventListener("mouseenter", Swal.stopTimer);
+                toast.addEventListener("mouseleave", Swal.resumeTimer);
+            },
+        }).fire({
+            title: 'right',
+        });
         game.bar.vx = game.moveSpeed;
     });
     socket.on("stopMoving", (playerNum) => {
         console.log(playerNum);
         game.bar.vx = 0;
+    });
+    socket.on("startGame", (random) => {
+        game.ball.vx = random;
+        game.ball.isGameStart = true;
+    });
+    socket.on("gameOver", () => {
+        game.ball.isGameStart = false;
+        Swal.fire({
+            title: "GAME OVER",
+            text: "ㅋㅋ",
+            icon: "warning",
+            confirmButtonText: "ㅇㅋ",
+        });
     });
 
 
@@ -510,6 +550,7 @@
 
             this.playerNum = 1;
             this.moveSpeed = 2;
+            this.lr = null;
 
             this.canvas.width = 350
             this.canvas.height = 350
@@ -530,9 +571,9 @@
 
 
             window.addEventListener('keydown', (e) => {
-                if (e.key === "ArrowRight") { socket.emit('ArrowRight', chatter.curRoom, this.playerNum);/*this.bar.vx = moveSpeed;*/ }
-                if (e.key === "ArrowLeft") { socket.emit('ArrowLeft', chatter.curRoom, this.playerNum);/*this.bar.vx = -moveSpeed;*/ }
-                if (e.key == " ") { socket.emit('SpaceBar', chatter.curRoom, this.playerNum); /*this.ball.isGameStart = true;*/ }
+                if (e.key === "ArrowRight" && this.lr === 'right') { socket.emit('ArrowRight', chatter.curRoom, this.playerNum);/*this.bar.vx = moveSpeed;*/ }
+                if (e.key === "ArrowLeft" && this.lr === 'left') { socket.emit('ArrowLeft', chatter.curRoom, this.playerNum);/*this.bar.vx = -moveSpeed;*/ }
+                if (e.key == " ") { socket.emit('SpaceBar', chatter.curRoom); /*this.ball.isGameStart = true;*/ }
             });
 
             window.addEventListener('keyup', (e) => {
@@ -624,7 +665,7 @@
             this.canvasWidth = canvasWidth;
             this.canvasHeight = canvasHeight;
 
-            this.vx = Math.random() * 5 + 3;
+            this.vx = null;//Math.random() * 5 + 3;
             this.vy = -5;
 
             this.bar = bar;
@@ -664,8 +705,11 @@
 
             // 바닥에 충돌한 경우는 게임을 다시 시작
             if (this.y + this.r >= this.canvasHeight) {
-                this.y = this.bar.y - this.r;
-                this.isGameStart = false;
+                // this.y = this.bar.y - this.r;
+                // this.isGameStart = false;
+
+                socket.emit('die', chatter.curRoom);
+
             }
         }
 
